@@ -1,0 +1,119 @@
+@startuml
+namespace report {
+    class GenericReport << (S,Aquamarine) >> {
+        - lock sync.Mutex
+        - data []byte
+        - out *os.File
+        - opt *godog.Options
+
+        - addTestReport(data []byte) error
+        - getWriter() Writer
+
+        + Flush() error
+        + GetGoDogOptions() godog.Options
+
+    }
+    class JunitError << (S,Aquamarine) >> {
+        + XMLName xml.Name
+        + Message string
+        + Type string
+
+    }
+    class JunitFailure << (S,Aquamarine) >> {
+        + Message string
+        + Type string
+
+    }
+    class JunitPackageSuite << (S,Aquamarine) >> {
+        + XMLName xml.Name
+        + Name string
+        + Tests int
+        + Skipped int
+        + Failures int
+        + Errors int
+        + Time string
+        + TestSuites []JunitTestSuite
+
+    }
+    class JunitReport << (S,Aquamarine) >> {
+        - lock sync.Mutex
+        - finalReport *JunitPackageSuite
+        - out *os.File
+        - time float64
+        - opt *godog.Options
+
+        - getWriter() Writer
+        - addTestReport(data []byte) error
+
+        + Flush() error
+        + GetGoDogOptions() godog.Options
+
+    }
+    class JunitTestCase << (S,Aquamarine) >> {
+        + XMLName xml.Name
+        + Name string
+        + Status string
+        + Time string
+        + Failure *JunitFailure
+        + Error []JunitError
+
+    }
+    class JunitTestSuite << (S,Aquamarine) >> {
+        + XMLName xml.Name
+        + Name string
+        + Tests int
+        + Skipped int
+        + Failures int
+        + Errors int
+        + Time string
+        + TestCases []JunitTestCase
+
+    }
+    interface Reporter  {
+        - getWriter() Writer
+        - addTestReport( []byte) error
+
+        + GetGoDogOptions() godog.Options
+        + Flush() error
+
+    }
+    interface TestSuiteRunner  {
+        + Run() int
+        + GetReporter() Reporter
+        + AddSynchronousTests(suite ...godog.TestSuite) TestSuiteRunner
+        + AddAsynchronousTests(suite ...godog.TestSuite) TestSuiteRunner
+
+    }
+    interface Writer  {
+        + Close() error
+
+    }
+    class compoundSuites << (S,Aquamarine) >> {
+        - reporter Reporter
+        - synchronousTests []godog.TestSuite
+        - asynchronousTests []godog.TestSuite
+        - status int
+
+        + Run() int
+        + GetReporter() Reporter
+        + AddSynchronousTests(testSuites ...godog.TestSuite) TestSuiteRunner
+        + AddAsynchronousTests(testSuites ...godog.TestSuite) TestSuiteRunner
+
+    }
+    class onMemWriter << (S,Aquamarine) >> {
+        - data []byte
+
+        + FinalReport Reporter
+
+        + Write(data []byte) (int, error)
+        + Close() error
+
+    }
+}
+
+"report.Reporter" <|-- "report.GenericReport"
+"report.Reporter" <|-- "report.JunitReport"
+"report.TestSuiteRunner" <|-- "report.compoundSuites"
+"report.Writer" <|-- "report.onMemWriter"
+
+@enduml
